@@ -87,6 +87,11 @@
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif
 
+#ifdef __FreeBSD__
+#define __bswap_32(x) __bswap32(x)
+#define __bswap_16(x) __bswap16(x)
+#endif
+
 #ifdef __ANDROID__
 #ifndef in_port_t
 #define in_port_t uint16_t
