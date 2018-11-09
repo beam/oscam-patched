@@ -5362,14 +5362,17 @@ static void *dvbapi_main_local(void *cli)
 		sigemptyset(&signal_action.sa_mask);
 		signal_action.sa_flags = SA_RESTART;
 		sigaction(SIGRTMIN + 1, &signal_action, NULL);
-
-		dir_fd = open(TMPDIR, O_RDONLY);
-		if(dir_fd >= 0)
-		{
-			fcntl(dir_fd, F_SETSIG, SIGRTMIN + 1);
-			fcntl(dir_fd, F_NOTIFY, DN_MODIFY | DN_CREATE | DN_DELETE | DN_MULTISHOT);
-			event_handler(SIGRTMIN + 1);
-		}
+		#if defined(__FreeBSD__)
+			cs_log("Only PMT 4-6 supported on FreeBSD, sorry...");
+		#else
+			dir_fd = open(TMPDIR, O_RDONLY);
+			if(dir_fd >= 0)
+			{
+				fcntl(dir_fd, F_SETSIG, SIGRTMIN + 1);
+				fcntl(dir_fd, F_NOTIFY, DN_MODIFY | DN_CREATE | DN_DELETE | DN_MULTISHOT);
+				event_handler(SIGRTMIN + 1);
+			}
+		#endif
 	}
 	else
 	{

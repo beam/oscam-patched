@@ -7,7 +7,7 @@
 #define WEBIF_JQUERY 1
 #define TOUCH 1
 #define WITH_SSL 1
-#if defined(__linux__) || defined(__CYGWIN__)
+#if defined(__linux__) || defined(__CYGWIN__) || defined(__FreeBSD__)
 #define HAVE_DVBAPI 1
 #endif
 //#define WITH_NEUTRINO 1
