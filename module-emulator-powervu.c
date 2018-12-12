@@ -425,6 +425,8 @@ static const uint8_t table13[] = { 0x4F, 0x4E, 0xE1, 0x6A, 0x21, 0xD3, 0xF7, 0xA
 static const uint8_t table14[] = { 0xDD, 0x39, 0xB9, 0x65, 0x03, 0x91, 0xF1, 0xAC };
 static const uint8_t table15[] = { 0x3F, 0x50, 0xB5, 0x6F, 0x37, 0xC9, 0x13, 0x5D };
 static const uint8_t table16[] = { 0xF9, 0x5C, 0xFD, 0x72, 0x19, 0x42, 0x23, 0x6B };
+static const uint8_t table17[] = { 0xDF, 0x60, 0x93, 0x64, 0x33, 0x16, 0xB3, 0x8A };
+static const uint8_t table18[] = { 0x09, 0x64, 0x5F, 0x6B, 0xFB, 0x21, 0x19, 0xE4 };
 
 static void PowervuHashModes0Fto18Tables(uint8_t *data, uint8_t *hash, const uint8_t *table)
 {
@@ -448,6 +450,52 @@ static void PowervuHashModes0Fto18Tables(uint8_t *data, uint8_t *hash, const uin
 		hash[(i + 1) & 0x0F] = hash[(i + 1) & 0x0F] ^ data[i + 1] ^ (tmp >> 16);
 		hash[(i + 2) & 0x0F] = hash[(i + 2) & 0x0F] ^ data[i + 2] ^ (tmp >> 8);
 		hash[(i + 3) & 0x0F] = hash[(i + 3) & 0x0F] ^ data[i + 3] ^ (tmp >> 0);
+	}
+}
+
+static const uint8_t table19[] = { 0x02, 0x03, 0x05, 0x10 };
+
+static void PowervuHashModes19to27Tables3(uint8_t *data, uint8_t *hash, const uint8_t *table)
+{
+	int i;
+	uint8_t val, it[4];
+	uint16_t seed = 0xFFFF, tmp;
+
+	memset(hash, 0x00, 16);
+
+	for (i = 0; i < 4; i++)
+	{
+		it[i] = 0x10 - table[i];
+	}
+
+	for (i = 0; i < 16; i++)
+	{
+		val = ((seed >> it[0]) ^ (seed >> it[1]) ^ (seed >> it[2]) ^ (seed >> it[3])) & 0x01;
+
+		if (val == 0x00)
+		{
+			seed = seed >> 1;
+		}
+		else
+		{
+			seed = (seed >> 1) | 0x8000;
+		}
+		tmp = seed + (data[i] << 8) + data[i + 32];
+
+		val = ((seed >> it[0]) ^ (seed >> it[1]) ^ (seed >> it[2]) ^ (seed >> it[3])) & 0x01;
+
+		if (val == 0x00)
+		{
+			seed = seed >> 1;
+		}
+		else
+		{
+			seed = (seed >> 1) | 0x8000;
+		}
+		tmp = tmp + seed + (data[i + 16] << 8) + data[i + 48];
+
+		hash[i & 0x0F] ^= tmp >> 8;
+		hash[(i + 1) & 0x0F] ^= tmp;
 	}
 }
 
@@ -529,6 +577,18 @@ static void PowervuCreateHash(uint8_t *data, int len, uint8_t *hash, int mode)
 
 		case 22:
 			PowervuHashModes0Fto18Tables(dataPadded, hash, table16);
+			break;
+
+		case 23:
+			PowervuHashModes0Fto18Tables(dataPadded, hash, table17);
+			break;
+
+		case 24:
+			PowervuHashModes0Fto18Tables(dataPadded, hash, table18);
+			break;
+
+		case 25:
+			PowervuHashModes19to27Tables3(dataPadded, hash, table19);
 			break;
 
 		default:
@@ -756,7 +816,7 @@ static uint8_t PowervuUnmaskEcm(uint8_t *ecm, uint8_t *seedEcmCw, uint8_t *modeC
 {
 	int i, l;
 	uint8_t data[64], mask[16];
-	uint8_t hashModeEcm, hashModeCw, modeUnmask;
+	uint8_t hashModeEcm, hashModeCw, modeUnmask = 0;
 	uint32_t crc;
 
 	uint8_t sourcePos[] = { 0x04, 0x05, 0x06, 0x07, 0x0A, 0x0B, 0x0C, 0x0D,
@@ -793,7 +853,6 @@ static uint8_t PowervuUnmaskEcm(uint8_t *ecm, uint8_t *seedEcmCw, uint8_t *modeC
 
 	hashModeEcm = ecm[8] ^ PowervuCrc8Calc(data, 24);
 
-	modeUnmask = 0;
 	if (extraBytesLen > 0)
 	{
 		modeUnmask = PowervuGetModeUnmask(ecm + 10);
@@ -969,9 +1028,9 @@ static void PowervuCreateCw(uint8_t *seed, uint8_t lenSeed, uint8_t *baseCw, uin
 	}
 }
 
-static inline int8_t PowervuGetEcmKey(uint8_t *key, uint16_t srvid, uint8_t index, uint32_t keyRef)
+static inline int8_t PowervuGetEcmKey(uint8_t *key, uint16_t srvid, uint8_t keyIndex, uint32_t keyRef)
 {
-	return FindKey('P', srvid, 0xFFFF0000, index == 1 ? "01" : "00", key, 7, 0, keyRef, 0, NULL);
+	return FindKey('P', srvid, 0xFFFF0000, keyIndex == 1 ? "01" : "00", key, 7, 0, keyRef, 0, NULL);
 }
 
 static inline int8_t PowervuGetEmmKey(uint8_t *key, char *uniqueAddress, uint32_t keyRef, uint32_t *groupId)
@@ -1842,14 +1901,14 @@ static void PowervuUnmaskEmm(uint8_t *emm)
 	emm[l + 3] = crc >> 0;
 }
 
-static int8_t PowervuUpdateEcmKeysByGroup(uint32_t groupId, uint8_t index, uint8_t *Key, uint32_t uniqueAddress)
+static int8_t PowervuUpdateEcmKeysByGroup(uint32_t groupId, uint8_t keyIndex, uint8_t *Key, uint32_t uniqueAddress)
 {
 	int8_t ret = 0;
 	uint8_t oldKey[7];
 	uint32_t foundProvider = 0, keyRef = 0;
 	char indexStr[3], uaInfo[13];
 
-	snprintf(indexStr, 3, "%02X", index);
+	snprintf(indexStr, 3, "%02X", keyIndex);
 	snprintf(uaInfo, 13, "UA: %08X", uniqueAddress);
 
 	SAFE_MUTEX_LOCK(&emu_key_data_mutex);
