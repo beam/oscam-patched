@@ -28,6 +28,7 @@ typedef struct
 	int8_t have_pmt_data;
 	int8_t have_ecm_data;
 	int8_t have_emm_data;
+	int8_t reset_key_data;
 	uint8_t cat_data[1024+208];
 	uint8_t pat_data[1024+208];
 	uint8_t pmt_data[1024+208];
@@ -39,10 +40,15 @@ typedef struct
 	uint16_t ecm_data_pos;
 	uint16_t emm_data_pos;
 	uint16_t srvid;
+	uint16_t caid;
+	uint16_t tsid;
+	uint16_t onid;
+	uint32_t ens;
 	uint16_t pmt_pid;
 	uint16_t ecm_pid;
 	uint16_t emm_pid;
 	uint16_t video_pid;
+	uint16_t teletext_pid;
 	uint16_t pcr_pid;
 	uint16_t audio_pids[EMU_STREAM_MAX_AUDIO_SUB_TRACKS];
 	uint8_t audio_pid_count;
