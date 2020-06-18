@@ -1059,7 +1059,9 @@ typedef struct ecm_request_t
 
 #if defined MODULE_GBOX
 	uint32_t		gbox_crc;						// rcrc for gbox, used to identify ECM task in peer responses
-	uint16_t		gbox_ecm_id;
+	uint16_t		gbox_cw_src_peer;
+	uint16_t		gbox_ecm_src_peer;
+	uint8_t			gbox_ecm_dist;
 	uint8_t			gbox_ecm_status;
 	LLIST			*gbox_cards_pending;			// type gbox_card_pending
 #endif
@@ -1505,6 +1507,10 @@ struct s_reader										// contains device info, reader info and card info
 	int8_t			needsglobalfirst;				// 0:Write one Global EMM for SHARED EMM disabled 1:Write one Global EMM for SHARED EMM enabled
 #endif
 #ifdef READER_NAGRA_MERLIN
+	uint8_t			irdid[4];
+	uint8_t			irdid_length;
+	uint8_t			public_exponent[3];
+	uint8_t			public_exponent_length;
 	uint8_t			mod1[112];
 	uint8_t			mod1_length;
 	uint8_t			data50[80];
@@ -1529,9 +1535,7 @@ struct s_reader										// contains device info, reader info and card info
 	uint8_t			block3[8];
 	uint8_t			v[8];
 	uint8_t			iout[8];
-	uint32_t		dword_83DBC;
 	uint8_t			data2[4];
-	uint8_t			cak7expo[0x11];
 	uint8_t			data[0x80];
 	uint8_t			step1[0x60];
 	uint8_t			step2[0x68];
@@ -1754,6 +1758,8 @@ struct s_reader										// contains device info, reader info and card info
 	uint8_t			ins7E11[0x01 + 1];
 	uint8_t			ins2e06[0x04 + 1];
 	int8_t			ins7e11_fast_reset;
+	uint8_t			k1_generic[0x10 + 1];			// k1 for generic pairing mode
+	uint8_t			k1_unique[0x10 + 1];			// k1 for unique pairing mode
 	uint8_t			sc8in1_dtrrts_patch;			// fix for kernel commit 6a1a82df91fa0eb1cc76069a9efe5714d087eccd
 
 #ifdef READER_VIACCESS
@@ -1775,10 +1781,13 @@ struct s_reader										// contains device info, reader info and card info
 	uint8_t			gbox_maxdist;
 	uint8_t			gbox_maxecmsend;
 	uint8_t			gbox_reshare;
-	uint8_t			gbox_cccam_reshare;
+	int8_t			gbox_cccam_reshare;
 	char			last_gsms[128];
 	uint16_t		gbox_remm_peer;
 	uint16_t		gbox_gsms_peer;
+	uint8_t			gbox_force_remm;
+	uint16_t		gbox_cw_src_peer;
+	uint8_t			gbox_crd_slot_lev;
 #endif
 
 #ifdef MODULE_PANDORA
@@ -2176,7 +2185,7 @@ struct s_config
 	uint8_t			log_hello;
 	uint8_t			dis_attack_txt;
 	char			*gbox_tmp_dir;
-	uint8_t			ccc_reshare;
+	uint8_t			cc_gbx_reshare_en;
 	uint16_t		gbox_ignored_peer[GBOX_MAX_IGNORED_PEERS];
 	uint8_t			gbox_ignored_peer_num;
 	uint16_t		accept_remm_peer[GBOX_MAX_REMM_PEERS];
@@ -2187,7 +2196,8 @@ struct s_config
 	uint8_t			gbox_msg_type;
 	uint16_t		gbox_dest_peers[GBOX_MAX_DEST_PEERS];
 	uint8_t			gbox_dest_peers_num;
-	char			gbox_msg_txt[GBOX_MAX_MSG_TXT+1];
+	char				gbox_msg_txt[GBOX_MAX_MSG_TXT+1];
+	CAIDTAB			ccc_gbx_check_caidtab;
 #endif
 #ifdef MODULE_SERIAL
 	char			*ser_device;
